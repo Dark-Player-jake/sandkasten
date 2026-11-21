@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sandkasten</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23d9b36c'/><rect x='3' y='9' width='10' height='4' fill='%23a77c3a'/></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Sandkasten</h1>
+    <p class="sub">Streu Material, sieh zu, was passiert. Käfer fressen Pflanzen und vererben ihr Tempo.</p>
+  </header>
+  <div class="stage">
+    <canvas id="world" width="320" height="180" aria-label="Simulationsfläche. Linke Maustaste malt, rechte radiert."></canvas>
+    <aside class="panel">
+      <section>
+        <h2>Material</h2>
+        <div id="palette" class="palette" role="radiogroup" aria-label="Material"></div>
+      </section>
+      <section>
+        <label class="row">Pinsel <input id="brush" type="range" min="1" max="16" value="4"> <output id="brushOut">4</output></label>
+        <label class="row">Tempo <input id="speed" type="range" min="1" max="4" value="1"> <output id="speedOut">1×</output></label>
+      </section>
+      <section class="buttons">
+        <button id="pause" type="button">Pause</button>
+        <button id="stepBtn" type="button" disabled>Schritt</button>
+        <button id="scene" type="button">Ökosystem</button>
+        <button id="rain" type="button" aria-pressed="false">Regen</button>
+        <button id="clear" type="button">Leeren</button>
+        <button id="save" type="button">Speichern</button>
+        <button id="load" type="button">Laden</button>
+        <button id="shot" type="button">Bild sichern</button>
+      </section>
+      <section>
+        <h2>Ökosystem</h2>
+        <dl class="stats">
+          <dt>Käfer</dt><dd id="sBeetles">0</dd>
+          <dt>Pflanzen</dt><dd id="sPlants">0</dd>
+          <dt>Tempo-Gen</dt><dd id="sGene">–</dd>
+        </dl>
+        <canvas id="chart" width="240" height="70" aria-label="Verlauf: Käfer (dunkel) und Pflanzen (grün)"></canvas>
+      </section>
+      <p class="hint"><kbd>1</kbd>–<kbd>0</kbd>, <kbd>Q</kbd>–<kbd>R</kbd> Material · <kbd>Leer</kbd> Pause · <kbd>[</kbd> <kbd>]</kbd> Pinsel · Rechtsklick radiert</p>
+      <p id="msg" class="msg" role="status" aria-live="polite"></p>
+    </aside>
+  </div>
+</main>
+<script type="module" src="main.mjs"></script>
+</body>
+</html>

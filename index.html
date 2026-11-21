@@ -14,7 +14,7 @@
     <p class="sub">Streu Material, sieh zu, was passiert. Käfer fressen Pflanzen und vererben ihr Tempo.</p>
   </header>
   <div class="stage">
-    <canvas id="world" width="320" height="180" aria-label="Simulationsfläche. Linke Maustaste malt, rechte radiert."></canvas>
+    <canvas id="world" width="320" height="180" role="img" aria-label="Simulationsfläche. Linke Maustaste malt, rechte radiert."></canvas>
     <aside class="panel">
       <section>
         <h2>Material</h2>
@@ -41,7 +41,7 @@
           <dt>Pflanzen</dt><dd id="sPlants">0</dd>
           <dt>Tempo-Gen</dt><dd id="sGene">–</dd>
         </dl>
-        <canvas id="chart" width="240" height="70" aria-label="Verlauf: Käfer (dunkel) und Pflanzen (grün)"></canvas>
+        <canvas id="chart" width="240" height="70" role="img" aria-label="Verlauf: Käfer (Textfarbe) und Pflanzen (grün)"></canvas>
       </section>
       <p class="hint"><kbd>1</kbd>–<kbd>0</kbd>, <kbd>Q</kbd>–<kbd>R</kbd> Material · <kbd>Leer</kbd> Pause · <kbd>[</kbd> <kbd>]</kbd> Pinsel · Rechtsklick radiert</p>
       <p id="msg" class="msg" role="status" aria-live="polite"></p>

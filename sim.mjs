@@ -159,9 +159,9 @@ function beetle(w, i, x, y) {
   const wet = (t) => t === M.WATER || t === M.OIL || t === M.ACID;
   if (wet(get(w, x, y - 1)) || wet(get(w, x - 1, y)) || wet(get(w, x + 1, y))) {
     const up = idx(w, x, y - 1);
-    if (up >= 0 && wet(w.type[up]) && w.rng() < 0.5) { swap(w, i, up); return; }
+    if (up >= 0 && !w.moved[up] && wet(w.type[up]) && w.rng() < 0.5) { swap(w, i, up); return; }
     const side = idx(w, x + ((w.shade[i] & 1) ? 1 : -1), y);
-    if (side >= 0 && wet(w.type[side]) && w.rng() < 0.3) { swap(w, i, side); return; }
+    if (side >= 0 && !w.moved[side] && wet(w.type[side]) && w.rng() < 0.3) { swap(w, i, side); return; }
   }
   if (tryMove(w, i, x, y, 0, 1)) return; // fällt ohne Halt
   // Futtersuche: gelegentlich Umgebung absuchen und zur nächsten Pflanze drehen. Schnelle Käfer sehen weiter.

@@ -22,12 +22,18 @@ const MATERIALS = [
 ];
 
 // Farbtabelle: je Material 4 Helligkeitsstufen, ausgewählt über shade.
+// Im Dunkelmodus wären Öl und Rauch auf dem dunklen Grund kaum sichtbar, daher eigene Töne.
+const DARK_RGB = { [M.OIL]: [128, 98, 72], [M.SMOKE]: [150, 148, 154] };
 const LUT = new Uint32Array(16 * 4);
-for (const { m, rgb } of MATERIALS) for (let s = 0; s < 4; s++) {
+function buildLut(dark) { for (const mat of MATERIALS) for (let s = 0; s < 4; s++) {
+  const { m } = mat, rgb = (dark && DARK_RGB[m]) || mat.rgb;
   const f = 0.9 + s * 0.06;
   const [r, g, b] = rgb.map((c) => Math.min(255, Math.round(c * f)));
   LUT[m * 4 + s] = (255 << 24) | (b << 16) | (g << 8) | r;
-}
+} }
+const darkMq = matchMedia('(prefers-color-scheme: dark)');
+buildLut(darkMq.matches);
+darkMq.addEventListener?.('change', (e) => { buildLut(e.matches); renderChart(); });
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('world'), ctx = canvas.getContext('2d');
@@ -44,6 +50,7 @@ for (const mat of MATERIALS) {
   b.type = 'button';
   b.setAttribute('role', 'radio');
   b.setAttribute('aria-label', `${mat.name} (Taste ${mat.key.toUpperCase()})`);
+  b.title = `${mat.name} (${mat.key.toUpperCase()})`;
   b.dataset.m = mat.m;
   b.innerHTML = `<i style="background:rgb(${mat.rgb})"></i><span>${mat.name}</span>`;
   b.addEventListener('click', () => select(mat.m));
@@ -51,12 +58,20 @@ for (const mat of MATERIALS) {
 }
 function select(m) {
   current = m;
-  for (const b of pal.children) b.setAttribute('aria-checked', String(+b.dataset.m === m));
+  for (const b of pal.children) { const on = +b.dataset.m === m; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
 }
+// Radiogruppe: ein Tab-Stopp, Pfeiltasten wechseln das Material
+pal.addEventListener('keydown', (e) => {
+  const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+  if (!d) return;
+  e.preventDefault();
+  const bs = [...pal.children], k = (bs.indexOf(document.activeElement) + d + bs.length) % bs.length;
+  select(+bs[k].dataset.m); bs[k].focus();
+});
 select(M.SAND);
 
 // Eingabe
-let drawing = false, erase = false, last = null;
+let drawing = false, erase = false, last = null, pointer = null;
 const toCell = (e) => {
   const r = canvas.getBoundingClientRect();
   return [Math.floor(((e.clientX - r.left) / r.width) * W), Math.floor(((e.clientY - r.top) / r.height) * H)];
@@ -69,14 +84,17 @@ function strokeTo([x, y]) {
   for (let k = 0; k <= n; k++) paint(world, Math.round(lx + ((x - lx) * k) / n), Math.round(ly + ((y - ly) * k) / n), brush, m, chance);
   last = [x, y];
 }
+// Nur ein Zeiger malt; weitere Finger oder Mittelklick werden ignoriert
 canvas.addEventListener('pointerdown', (e) => {
-  drawing = true; erase = e.button === 2; last = null;
+  if (drawing || (e.button !== 0 && e.button !== 2)) return;
+  drawing = true; erase = e.button === 2; last = null; pointer = e.pointerId;
   canvas.setPointerCapture(e.pointerId);
   strokeTo(toCell(e));
 });
-canvas.addEventListener('pointermove', (e) => { if (drawing) strokeTo(toCell(e)); });
-canvas.addEventListener('pointerup', () => { drawing = false; });
-canvas.addEventListener('pointercancel', () => { drawing = false; });
+canvas.addEventListener('pointermove', (e) => { if (drawing && e.pointerId === pointer) strokeTo(toCell(e)); });
+const endStroke = (e) => { if (e.pointerId === pointer) { drawing = false; pointer = null; } };
+canvas.addEventListener('pointerup', endStroke);
+canvas.addEventListener('pointercancel', endStroke);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 $('brush').addEventListener('input', (e) => { brush = +e.target.value; $('brushOut').value = brush; });
@@ -88,7 +106,10 @@ function setPaused(p) {
 }
 $('pause').addEventListener('click', () => setPaused(!paused));
 $('stepBtn').addEventListener('click', () => step(world));
-$('clear').addEventListener('click', () => { world = createWorld(W, H, Date.now() & 0xffff); history.length = 0; });
+$('clear').addEventListener('click', () => {
+  world = createWorld(W, H, Date.now() & 0xffff); history.length = 0;
+  if (raining) { setRain(false); say('Geleert, Regen ist aus.'); }
+});
 $('scene').addEventListener('click', () => { buildScene(); history.length = 0; setRain(true); say('Ökosystem angelegt, sanfter Regen ist an.'); });
 
 function setRain(on) { raining = on; $('rain').setAttribute('aria-pressed', String(on)); $('rain').textContent = on ? 'Regen an' : 'Regen'; }
@@ -104,8 +125,8 @@ $('shot').addEventListener('click', () => {
 const KEY = 'sandkasten.save.v1';
 $('save').addEventListener('click', () => {
   try {
-    const bin = new Uint8Array(W * H * 3);
-    for (let i = 0; i < W * H; i++) { bin[i * 3] = world.type[i]; bin[i * 3 + 1] = world.life[i]; bin[i * 3 + 2] = world.gene[i]; }
+    const bin = new Uint8Array(W * H * 4);
+    for (let i = 0; i < W * H; i++) { bin[i * 4] = world.type[i]; bin[i * 4 + 1] = world.life[i]; bin[i * 4 + 2] = world.gene[i]; bin[i * 4 + 3] = world.shade[i]; }
     let s = ''; for (let i = 0; i < bin.length; i += 8192) s += String.fromCharCode(...bin.subarray(i, i + 8192));
     localStorage.setItem(KEY, btoa(s));
     say('Gespeichert.');
@@ -116,28 +137,31 @@ $('load').addEventListener('click', () => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return say('Noch nichts gespeichert.');
     const s = atob(raw);
-    if (s.length !== W * H * 3) return say('Spielstand passt nicht zu dieser Version.');
+    const n = s.length / (W * H); // 3 Byte: alter Stand ohne Farbton, 4 Byte: mit Farbton (bestimmt die Pflanzenhöhe)
+    if (n !== 3 && n !== 4) return say('Spielstand passt nicht zu dieser Version.');
     world = createWorld(W, H, Date.now() & 0xffff);
     for (let i = 0; i < W * H; i++) {
-      const t = s.charCodeAt(i * 3);
+      const t = s.charCodeAt(i * n);
       if (t > M.BEETLE) continue; // unbekanntes Material verwerfen statt abstürzen
-      world.type[i] = t; world.life[i] = s.charCodeAt(i * 3 + 1); world.gene[i] = s.charCodeAt(i * 3 + 2);
-      world.shade[i] = (Math.random() * 255) | 0;
+      world.type[i] = t; world.life[i] = s.charCodeAt(i * n + 1); world.gene[i] = s.charCodeAt(i * n + 2);
+      world.shade[i] = n === 4 ? s.charCodeAt(i * n + 3) : (Math.random() * 255) | 0;
     }
     history.length = 0;
     say('Geladen.');
   } catch { say('Laden nicht möglich.'); }
 });
 
+function resizeBrush(d) { brush = Math.max(1, Math.min(16, brush + d)); $('brush').value = brush; $('brushOut').value = brush; }
 addEventListener('keydown', (e) => {
-  if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey || e.altKey || e.repeat && e.key === ' ') return;
+  if (e.target instanceof HTMLInputElement || e.metaKey) return;
+  // [ ] liegen auf deutschen Tastaturen auf AltGr/Option, deshalb vor dem Modifier-Filter; + und - als Alternative
+  const bd = { '[': -1, ']': 1, '-': -1, '+': 1 }[e.key];
+  if (bd) { e.preventDefault(); resizeBrush(bd); return; }
+  if (e.ctrlKey || e.altKey || e.repeat && e.key === ' ') return;
   const mat = MATERIALS.find((x) => x.key === e.key.toLowerCase());
   if (mat) { select(mat.m); return; }
   if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); setPaused(!paused); } // auf Knöpfen löst die Leertaste den Knopf aus
-  else if (e.key === '[' || e.key === ']') {
-    brush = Math.max(1, Math.min(16, brush + (e.key === ']' ? 1 : -1)));
-    $('brush').value = brush; $('brushOut').value = brush;
-  } else if (e.key === '.' && paused) step(world);
+  else if (e.key === '.' && paused) step(world);
 });
 
 let msgTimer;
@@ -159,7 +183,9 @@ function render() {
 }
 
 function renderChart() {
-  const cw = chart.width, ch = chart.height;
+  const dpr = Math.min(2, devicePixelRatio || 1), cw = chart.clientWidth || 240, ch = chart.clientHeight || 70;
+  if (chart.width !== Math.round(cw * dpr) || chart.height !== Math.round(ch * dpr)) { chart.width = Math.round(cw * dpr); chart.height = Math.round(ch * dpr); }
+  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   cctx.clearRect(0, 0, cw, ch);
   if (history.length < 2) return;
   const maxB = Math.max(4, ...history.map((h) => h.beetles));
@@ -176,9 +202,15 @@ function renderChart() {
   line('beetles', maxB, getComputedStyle(document.body).color);
 }
 
-let frame = 0;
-function loop() {
-  if (!paused) for (let s = 0; s < speed; s++) {
+let frame = 0, lastT = 0, acc = 0;
+const TICK = 1000 / 60; // Simulation läuft mit 60 Schritten/s × Tempo, unabhängig von der Bildwiederholrate
+function loop(t) {
+  if (drawing && last) strokeTo(last); // gedrückt halten streut weiter
+  acc = Math.min(acc + (lastT ? t - lastT : TICK), TICK * 4); // nach Tab-Wechsel nicht nachholen
+  lastT = t;
+  const ticks = Math.floor(acc / TICK);
+  acc -= ticks * TICK;
+  if (!paused) for (let s = 0; s < ticks * speed; s++) {
     if (raining && world.rng() < 0.2) { const x = (world.rng() * W) | 0; if (world.type[x] === M.EMPTY) set(world, x, 0, M.WATER); }
     step(world);
     // Flammen flackern über den Farbton

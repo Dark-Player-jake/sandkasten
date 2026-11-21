@@ -95,6 +95,7 @@ canvas.addEventListener('pointermove', (e) => { if (drawing && e.pointerId === p
 const endStroke = (e) => { if (e.pointerId === pointer) { drawing = false; pointer = null; } };
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
+canvas.addEventListener('lostpointercapture', endStroke);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 $('brush').addEventListener('input', (e) => { brush = +e.target.value; $('brushOut').value = brush; });
@@ -154,10 +155,10 @@ $('load').addEventListener('click', () => {
 function resizeBrush(d) { brush = Math.max(1, Math.min(16, brush + d)); $('brush').value = brush; $('brushOut').value = brush; }
 addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement || e.metaKey) return;
-  // [ ] liegen auf deutschen Tastaturen auf AltGr/Option, deshalb vor dem Modifier-Filter; + und - als Alternative
-  const bd = { '[': -1, ']': 1, '-': -1, '+': 1 }[e.key];
-  if (bd) { e.preventDefault(); resizeBrush(bd); return; }
-  if (e.ctrlKey || e.altKey || e.repeat && e.key === ' ') return;
+  // [ ] liegen auf deutschen Tastaturen auf AltGr/Option, deshalb vor dem Modifier-Filter
+  if (e.key === '[' || e.key === ']') { e.preventDefault(); resizeBrush(e.key === ']' ? 1 : -1); return; }
+  if (e.ctrlKey || e.altKey || e.repeat && e.key === ' ') return; // Strg+Plus/Minus bleibt Browser-Zoom
+  if (e.key === '+' || e.key === '-') { resizeBrush(e.key === '+' ? 1 : -1); return; }
   const mat = MATERIALS.find((x) => x.key === e.key.toLowerCase());
   if (mat) { select(mat.m); return; }
   if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); setPaused(!paused); } // auf Knöpfen löst die Leertaste den Knopf aus
@@ -205,11 +206,12 @@ function renderChart() {
 let frame = 0, lastT = 0, acc = 0;
 const TICK = 1000 / 60; // Simulation läuft mit 60 Schritten/s × Tempo, unabhängig von der Bildwiederholrate
 function loop(t) {
-  if (drawing && last) strokeTo(last); // gedrückt halten streut weiter
   acc = Math.min(acc + (lastT ? t - lastT : TICK), TICK * 4); // nach Tab-Wechsel nicht nachholen
   lastT = t;
-  const ticks = Math.floor(acc / TICK);
+  const ticks = Math.floor(acc / TICK + 0.1); // Toleranz gegen schwankende Frame-Abstände (sonst 0/2-Ruckeln)
   acc -= ticks * TICK;
+  // Gedrückt halten streut weiter, im Takt der Simulation; Käfer und Samen nur beim Bewegen, sonst gäbe ein Klick einen Schwarm
+  if (drawing && last && current !== M.BEETLE && current !== M.SEED) for (let s = 0; s < ticks; s++) strokeTo(last);
   if (!paused) for (let s = 0; s < ticks * speed; s++) {
     if (raining && world.rng() < 0.2) { const x = (world.rng() * W) | 0; if (world.type[x] === M.EMPTY) set(world, x, 0, M.WATER); }
     step(world);

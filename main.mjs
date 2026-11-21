@@ -130,10 +130,10 @@ $('load').addEventListener('click', () => {
 });
 
 addEventListener('keydown', (e) => {
-  if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey || e.altKey || e.repeat && e.key === ' ') return;
   const mat = MATERIALS.find((x) => x.key === e.key.toLowerCase());
   if (mat) { select(mat.m); return; }
-  if (e.key === ' ') { e.preventDefault(); setPaused(!paused); }
+  if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); setPaused(!paused); } // auf Knöpfen löst die Leertaste den Knopf aus
   else if (e.key === '[' || e.key === ']') {
     brush = Math.max(1, Math.min(16, brush + (e.key === ']' ? 1 : -1)));
     $('brush').value = brush; $('brushOut').value = brush;

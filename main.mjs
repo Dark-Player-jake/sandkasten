@@ -1,4 +1,4 @@
-import { createWorld, step, paint, set, stats, M } from './sim.mjs';
+import { createWorld, step, paint, set, stats, ecosystemScene, M } from './sim.mjs';
 
 const W = 320, H = 180;
 let world = createWorld(W, H, Date.now() & 0xffff);
@@ -11,7 +11,7 @@ const MATERIALS = [
   { m: M.FIRE, name: 'Feuer', key: '5', rgb: [242, 110, 34] },
   { m: M.OIL, name: 'Öl', key: '6', rgb: [70, 52, 40] },
   { m: M.SEED, name: 'Samen', key: '7', rgb: [176, 200, 90] },
-  { m: M.BEETLE, name: 'Käfer', key: '8', rgb: [40, 34, 48] },
+  { m: M.BEETLE, name: 'Käfer', key: '8', rgb: [168, 62, 44] },
   { m: M.LAVA, name: 'Lava', key: '9', rgb: [230, 70, 30] },
   { m: M.ACID, name: 'Säure', key: '0', rgb: [150, 230, 60] },
   { m: M.ICE, name: 'Eis', key: 'q', rgb: [190, 225, 240] },
@@ -89,9 +89,10 @@ function setPaused(p) {
 $('pause').addEventListener('click', () => setPaused(!paused));
 $('stepBtn').addEventListener('click', () => step(world));
 $('clear').addEventListener('click', () => { world = createWorld(W, H, Date.now() & 0xffff); history.length = 0; });
-$('scene').addEventListener('click', () => { buildScene(); history.length = 0; say('Ökosystem angelegt. Gieß ab und zu nach.'); });
+$('scene').addEventListener('click', () => { buildScene(); history.length = 0; setRain(true); say('Ökosystem angelegt, sanfter Regen ist an.'); });
 
-$('rain').addEventListener('click', (e) => { raining = !raining; e.currentTarget.setAttribute('aria-pressed', String(raining)); e.currentTarget.textContent = raining ? 'Regen an' : 'Regen'; });
+function setRain(on) { raining = on; $('rain').setAttribute('aria-pressed', String(on)); $('rain').textContent = on ? 'Regen an' : 'Regen'; }
+$('rain').addEventListener('click', () => setRain(!raining));
 $('shot').addEventListener('click', () => {
   const big = document.createElement('canvas'); big.width = W * 4; big.height = H * 4;
   const b = big.getContext('2d'); b.imageSmoothingEnabled = false;
@@ -144,17 +145,7 @@ function say(t) { $('msg').textContent = t; clearTimeout(msgTimer); msgTimer = s
 
 function buildScene() {
   world = createWorld(W, H, Date.now() & 0xffff);
-  const r = world.rng;
-  // Hügel aus Sand über Stein, ein See in der Mitte
-  for (let x = 0; x < W; x++) {
-    const ground = Math.round(H - 30 - 14 * Math.sin(x / 37) - 8 * Math.sin(x / 13 + 1));
-    const lake = x > 130 && x < 200;
-    for (let y = ground; y < H; y++) set(world, x, y, y > ground + 10 ? M.STONE : M.SAND);
-    if (lake) for (let y = ground - 2; y < ground + 9; y++) set(world, x, y, M.WATER);
-  }
-  for (let k = 0; k < 160; k++) set(world, (r() * W) | 0, ((r() * 40) | 0) + 10, M.SEED);
-  for (let k = 0; k < 30; k++) for (let y = 0; y < 6; y++) set(world, 30 + k * 9, 4 + y, M.WATER);
-  for (let k = 0; k < 6; k++) set(world, 20 + ((r() * 280) | 0), 5, M.BEETLE, 90 + ((r() * 80) | 0));
+  ecosystemScene(world);
 }
 
 function render() {
@@ -188,7 +179,7 @@ function renderChart() {
 let frame = 0;
 function loop() {
   if (!paused) for (let s = 0; s < speed; s++) {
-    if (raining && world.rng() < 0.6) { const x = (world.rng() * W) | 0; if (world.type[x] === M.EMPTY) set(world, x, 0, M.WATER); }
+    if (raining && world.rng() < 0.2) { const x = (world.rng() * W) | 0; if (world.type[x] === M.EMPTY) set(world, x, 0, M.WATER); }
     step(world);
     // Flammen flackern über den Farbton
     if ((world.tick & 3) === 0) for (let i = 0; i < world.type.length; i++) if (world.type[i] === M.FIRE || world.type[i] === M.LAVA) world.shade[i] = (Math.random() * 4) | 0;
@@ -206,4 +197,5 @@ function loop() {
 }
 
 buildScene();
+setRain(true);
 requestAnimationFrame(loop);

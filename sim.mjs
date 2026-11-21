@@ -137,28 +137,50 @@ function burnNeighbors(w, x, y, boost = 1) {
 function beetle(w, i, x, y) {
   const g = w.gene[i];
   // Energie: schnelle Käfer (hohes Gen) verbrauchen mehr, finden aber eher Futter.
-  const cost = w.rng() < 0.35 + g / 400 ? 1 : 0;
-  if (w.life[i] <= cost) { become(w, i, M.SAND); return; }
+  const cost = w.rng() < 0.15 + g / 800 ? 1 : 0;
+  if (w.life[i] <= cost) { become(w, i, w.rng() < 0.4 ? M.SEED : M.SAND); return; } // tote Käfer düngen
   w.life[i] -= cost;
   // Fressen
   let ate = false;
   neighbors(w, x, y, (j) => {
-    if (!ate && w.type[j] === M.PLANT) { become(w, j, M.EMPTY); w.life[i] = Math.min(255, w.life[i] + 40); ate = true; }
+    // Satte Käfer fressen nicht, Wurzeln (Höhe 0) bleiben stehen: so wächst immer etwas nach
+    if (!ate && w.life[i] < 200 && w.type[j] === M.PLANT && w.gene[j] > 0) { become(w, j, M.EMPTY); w.life[i] = Math.min(255, w.life[i] + 40); ate = true; }
   });
   // Vermehrung mit Mutation
-  if (w.life[i] > 220) {
+  if (w.life[i] > 190 && w.rng() < 0.03) {
     const j = idx(w, x + (w.rng() < 0.5 ? -1 : 1), y);
     if (j >= 0 && w.type[j] === M.EMPTY) {
       const child = Math.max(1, Math.min(255, g + ((w.rng() * 41) | 0) - 20));
-      w.type[j] = M.BEETLE; w.life[j] = 90; w.gene[j] = child; w.shade[j] = w.shade[i]; w.moved[j] = 1;
-      w.life[i] = 120;
+      w.type[j] = M.BEETLE; w.life[j] = 90; w.gene[j] = child; w.shade[j] = w.shade[i] ^ 1; w.moved[j] = 1;
+      w.life[i] -= 120;
     }
   }
+  // Im Wasser: zur Oberfläche schwimmen statt am Grund festzusitzen
+  const wet = (t) => t === M.WATER || t === M.OIL || t === M.ACID;
+  if (wet(get(w, x, y - 1)) || wet(get(w, x - 1, y)) || wet(get(w, x + 1, y))) {
+    const up = idx(w, x, y - 1);
+    if (up >= 0 && wet(w.type[up]) && w.rng() < 0.5) { swap(w, i, up); return; }
+    const side = idx(w, x + ((w.shade[i] & 1) ? 1 : -1), y);
+    if (side >= 0 && wet(w.type[side]) && w.rng() < 0.3) { swap(w, i, side); return; }
+  }
   if (tryMove(w, i, x, y, 0, 1)) return; // fällt ohne Halt
+  // Futtersuche: gelegentlich Umgebung absuchen und zur nächsten Pflanze drehen. Schnelle Käfer sehen weiter.
+  if ((w.tick + i) % 8 === 0) {
+    const reach = 12 + (g >> 4); // schnelle Käfer sehen weiter (12–27 Zellen)
+    let best = 0, bestD = Infinity;
+    for (let dy = -8; dy <= 8; dy++) for (let dx = -reach; dx <= reach; dx++) {
+      if (dx && get(w, x + dx, y + dy) === M.PLANT && Math.abs(dx) < bestD) { bestD = Math.abs(dx); best = dx; }
+    }
+    if (best) w.shade[i] = (w.shade[i] & ~1) | (best > 0 ? 1 : 0);
+    else if (w.rng() < 0.03) w.shade[i] ^= 1; // ohne Futter in Sicht: ab und zu umkehren und weitersuchen
+  }
   if (w.rng() * 255 > g) return;
   const d = (w.shade[i] & 1) ? 1 : -1; // Laufrichtung steckt im Farbton-Bit
+  // Nicht freiwillig ins Wasser laufen: Kante zum See erkennen und umdrehen
+  if (wet(get(w, x + d, y)) || wet(get(w, x + d, y + 1))) { w.shade[i] ^= 1; return; }
   if (tryMove(w, i, x, y, d, 0)) return;
   if (get(w, x + d, y) !== M.EMPTY && tryMove(w, i, x, y, d, -1)) return; // eine Stufe klettern
+  if (get(w, x + d, y) !== M.EMPTY && get(w, x + d, y - 1) !== M.EMPTY && get(w, x, y - 1) === M.EMPTY && tryMove(w, i, x, y, 0, -1)) return; // an Wänden hochkrabbeln
   w.shade[i] ^= 1; // umdrehen
 }
 
@@ -171,7 +193,7 @@ function step1(w, i, x, y) {
       if ((below === M.SAND || below === M.PLANT) && w.rng() < 0.05) {
         let wet = false;
         for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (get(w, x + dx, y + dy) === M.WATER) wet = true;
-        if (wet) { become(w, i, M.PLANT); w.life[i] = 12 + ((w.rng() * 20) | 0); }
+        if (wet) { become(w, i, M.PLANT); w.life[i] = 12 + ((w.rng() * 20) | 0); w.gene[i] = 0; }
       } else powder(w, i, x, y);
       break;
     }
@@ -219,7 +241,7 @@ function step1(w, i, x, y) {
     }
     case M.SMOKE: if (--w.life[i] === 0) become(w, i, M.EMPTY); else gas(w, i, x, y); break;
     case M.STEAM: {
-      if (--w.life[i] === 0) { become(w, i, w.rng() < 0.35 ? M.WATER : M.EMPTY); break; }
+      if (--w.life[i] === 0) { become(w, i, w.rng() < 0.85 ? M.WATER : M.EMPTY); break; } // Dampf kondensiert meist wieder
       gas(w, i, x, y); break;
     }
     case M.ICE: {
@@ -227,14 +249,23 @@ function step1(w, i, x, y) {
       break;
     }
     case M.PLANT: {
-      // life = gespeichertes Wasser. Pflanzen trinken angrenzendes Wasser und wachsen damit nach oben.
-      if (w.rng() < 0.08) neighbors(w, x, y, (j, dx, dy) => {
+      // life = gespeichertes Wasser, gene = Höhe über der Wurzel. Die Endhöhe steckt im Farbton (Stängel teilen ihn).
+      if (w.rng() > 0.08) break;
+      // Ohne Wasser welken Triebe langsam (Wurzeln bleiben), so wuchert nichts endlos zu
+      if (w.life[i] === 0 && w.gene[i] > 0 && w.rng() < 0.02) { become(w, i, M.EMPTY); break; }
+      const maxH = 5 + (w.shade[i] % 22);
+      neighbors(w, x, y, (j, dx, dy) => {
         const t = w.type[j];
         if (t === M.WATER && w.life[i] < 40 && w.rng() < 0.25) { become(w, j, M.EMPTY); w.life[i] += 10; }
-        else if (w.life[i] > 0 && dy === -1 && t === M.EMPTY && w.rng() < 0.2) {
-          become(w, j, M.PLANT); w.life[j] = w.life[i] - 1; w.life[i] = 0;
+        else if (w.life[i] > 1 && dy === -1 && t === M.EMPTY && w.gene[i] < maxH && w.rng() < 0.2 * (1 - w.gene[i] / (maxH + 4))) {
+          const h = w.gene[i] + 1;
+          become(w, j, M.PLANT); w.shade[j] = w.shade[i]; w.gene[j] = h; w.life[j] = w.life[i] - 1; w.life[i] = 0;
         } else if (w.life[i] > 0 && t === M.PLANT && w.life[j] < w.life[i] - 1) { // Wasser im Stängel weiterreichen
           const half = (w.life[i] - w.life[j]) >> 1; w.life[i] -= half; w.life[j] += half;
+        } else if (t === M.EMPTY && dy === -1 && w.life[i] > 4 && w.rng() < 0.01) { // Verdunstung: Wasser kehrt als Dampf zurück
+          become(w, j, M.STEAM); w.life[i] -= 4;
+        } else if (t === M.EMPTY && dy >= 0 && dx && w.gene[i] >= maxH - 1 && w.life[i] > 6 && w.rng() < 0.006) { // reife Pflanze streut Samen
+          become(w, j, M.SEED); w.life[i] -= 6;
         }
       });
       break;
@@ -269,4 +300,22 @@ export function count(w, m) {
   let c = 0;
   for (let i = 0; i < w.type.length; i++) if (w.type[i] === m) c++;
   return c;
+}
+
+// Startszene: Hügel aus Sand über Stein, ein See in der Mitte, Samen, Regenwasser, ein paar Käfer.
+export function ecosystemScene(world) {
+  const { w: W, h: H, rng: r } = world;
+  for (let x = 0; x < W; x++) {
+    const ground = Math.round(H - 30 - 14 * Math.sin(x / 37) - 8 * Math.sin(x / 13 + 1));
+    const lake = x > W * 0.4 && x < W * 0.62;
+    for (let y = ground; y < H; y++) set(world, x, y, y > ground + 10 ? M.STONE : M.SAND);
+    if (lake) for (let y = ground - 2; y < ground + 9; y++) set(world, x, y, M.WATER);
+  }
+  for (let k = 0; k < 160; k++) set(world, (r() * W) | 0, ((r() * 40) | 0) + 10, M.SEED);
+  for (let k = 0; k < 30; k++) for (let y = 0; y < 6; y++) set(world, 30 + k * 9, 4 + y, M.WATER);
+  for (let k = 0; k < 6; k++) {
+    const x = 20 + ((r() * (W - 40)) | 0);
+    set(world, x, 5, M.BEETLE, 90 + ((r() * 80) | 0));
+    world.life[5 * W + x] = 255; // genug Vorrat, bis die ersten Pflanzen stehen
+  }
 }

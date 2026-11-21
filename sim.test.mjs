@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createWorld, set, get, step, count, stats, paint, M } from './sim.mjs';
+import { createWorld, set, get, step, count, stats, paint, ecosystemScene, M } from './sim.mjs';
 
 const run = (w, n) => { for (let i = 0; i < n; i++) step(w); };
 
@@ -66,7 +66,8 @@ test('Gas steigt auf', () => {
 test('Käfer fressen Pflanzen, vermehren sich und verhungern ohne Futter', () => {
   const w = createWorld(60, 12, 7);
   for (let x = 0; x < 60; x++) set(w, x, 11, M.STONE);
-  for (let x = 0; x < 60; x++) for (let y = 7; y < 11; y++) if (x % 3) set(w, x, y, M.PLANT);
+  // Stängel: Wurzel unten (Höhe 0), darüber fressbare Triebe
+  for (let x = 0; x < 60; x++) for (let y = 7; y < 11; y++) if (x % 3) { set(w, x, y, M.PLANT); w.gene[y * 60 + x] = 10 - y; }
   set(w, 30, 6, M.BEETLE);
   let peak = 0;
   for (let i = 0; i < 3000; i++) { step(w); peak = Math.max(peak, stats(w).beetles); }
@@ -83,4 +84,32 @@ test('Samen keimen nur mit Wasser in der Nähe', () => {
   run(dry, 300); run(wet, 300);
   assert.equal(count(dry, M.PLANT), 0);
   assert.ok(count(wet, M.PLANT) > 0);
+});
+
+test('Ein einzelner Funke entzündet Holz meistens', () => {
+  let lit = 0;
+  for (let seed = 1; seed <= 60; seed++) {
+    const w = createWorld(12, 8, seed);
+    for (let x = 0; x < 12; x++) set(w, x, 7, M.WOOD);
+    set(w, 6, 6, M.FIRE);
+    run(w, 60);
+    if (count(w, M.WOOD) < 12) lit++;
+  }
+  assert.ok(lit >= 36, `entzündet in ${lit}/60 Fällen`);
+});
+
+test('Startszene mit sanftem Regen: Käfer überleben lange, das Tempo-Gen verändert sich', () => {
+  let survived = 0, drift = 0;
+  for (const seed of [3, 4]) {
+    const w = createWorld(320, 180, seed);
+    ecosystemScene(w);
+    for (let t = 0; t < 7000; t++) {
+      if (w.rng() < 0.2) { const x = (w.rng() * 320) | 0; if (w.type[x] === M.EMPTY) set(w, x, 0, M.WATER); }
+      step(w);
+    }
+    const s = stats(w);
+    if (s.beetles > 0) { survived++; drift = Math.max(drift, Math.abs(s.avgGene - 128)); }
+  }
+  assert.ok(survived >= 1, 'mindestens eine Population lebt nach 7000 Ticks');
+  assert.ok(drift > 5, `Gen-Mittel hat sich verschoben (${drift.toFixed(1)})`);
 });

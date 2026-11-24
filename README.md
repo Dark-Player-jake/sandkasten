@@ -1,37 +1,67 @@
 # Sandkasten
 
-Falling-Sand-Sandbox im Browser mit kleinem Ökosystem: Pflanzen trinken Wasser, wachsen bis zu ihrer Endhöhe, verdunsten Wasser und streuen Samen. Käfer suchen Pflanzen, fressen die Triebe (Wurzeln bleiben), vermehren sich und vererben ihr Tempo-Gen mit Mutation. Schnelle Käfer sehen weiter, verbrauchen aber mehr Energie. Das Mittel des Tempo-Gens steht rechts, die Kurve zeigt Käfer und Pflanzen.
+**A falling-sand sandbox in the browser with a tiny ecosystem.** Plants drink water, grow to their
+full height, evaporate water and scatter seeds. Beetles look for plants, eat them and pass a speed
+gene on to their offspring.
 
-Mit dem sanften Regen (startet automatisch) hält sich das Ökosystem meist über lange Zeit; ohne Regen trocknet es aus und die Käfer sterben. Gemessen über 20.000 Ticks: mit Regen überleben die Käfer in den meisten Startszenen, und das Gen-Mittel wandert deutlich (z. B. 128 → 78 oder → 171).
+With the gentle rain (on by default in the ecosystem scene) the ecosystem usually survives for a
+long time. Without rain it dries out and the beetles die.
 
-15 Materialien: Sand, Wasser, Stein, Holz, Feuer, Öl, Samen, Käfer, Lava, Säure, Eis, Pflanze, Dampf, Rauch, Radierer.
+No build step, no dependencies.
 
-## Starten
+<!-- TODO before going public: add docs/screenshot.png and a live demo link (e.g. GitHub Pages). -->
 
-Kein Build, keine Abhängigkeiten. Wegen der ES-Module nicht per `file://` öffnen:
+> [!NOTE]
+> The user interface is in German for now. Contributions for an English UI are welcome.
+
+## Features
+
+- 15 materials: sand, water, stone, wood, fire, oil, seed, beetle, lava, acid, ice, plant, steam,
+  smoke, eraser.
+- An ecosystem with heredity: beetle speed is passed on and changes over generations.
+- An "ecosystem" button that sets up a starting scene and turns on gentle rain.
+- Pause, single step, brush size, one save slot in the browser.
+
+## Quick start
+
+The app uses ES modules, so it has to be served over HTTP (opening `index.html` via `file://`
+does not work):
 
 ```bash
+git clone https://github.com/Dark-Player-jake/sandkasten.git
+cd sandkasten
 python3 -m http.server 8000
 ```
 
-Dann `http://localhost:8000` öffnen.
+Then open <http://localhost:8000>.
 
-## Bedienung
+## Controls
 
-- Linke Maustaste / Finger malt, rechte Maustaste radiert
-- `1`–`0`, `Q`–`R`, `X` wählen das Material, `Leertaste` pausiert, `.` macht einen Einzelschritt, `[` `]` ändern den Pinsel
-- „Ökosystem" legt eine Startszene an und schaltet sanften Regen ein, „Regen" schaltet ihn um
-- Speichern/Laden nutzt den Browser-Speicher (ein Platz)
+- Left mouse button or finger paints, right mouse button erases.
+- `1`–`0`, `Q`–`R`, `X` pick a material, `Space` pauses, `.` advances one step, `[` `]` change the
+  brush size.
 
-## Tests
+## Development
 
 ```bash
 node --test
 ```
 
-Prüft die Physik (Sand, Wasser, Öl auf Wasser, Feuer inkl. Einzelfunke, Lava, Gas) und das Ökosystem (Fressen, Vermehren, Keimen, Langzeitlauf der Startszene mit Regen über 7000 Ticks, ca. 5 s).
+The tests cover the physics (sand, water, oil on water, fire including a single spark, lava, gas)
+and the ecosystem (eating, breeding, germination, and a long run of the starting scene with rain
+over 7,000 ticks, about 5 s).
 
-## Aufbau
+| File | Purpose |
+|---|---|
+| `sim.mjs` | Simulation without DOM (type, life, color and gene arrays; bottom-up update with alternating direction) |
+| `main.mjs` | Rendering via `ImageData`, input, saving, statistics |
 
-- `sim.mjs` – Simulation ohne DOM (Typ-, Lebens-, Farb- und Gen-Array, Update von unten nach oben mit wechselnder Richtung)
-- `main.mjs` – Rendering über `ImageData`, Eingabe, Speichern, Statistik
+## Contributing
+
+Issues and pull requests are welcome. Please run `node --test` before you open a pull request and
+keep the project free of dependencies and external resources.
+
+## License
+
+<!-- TODO: license not chosen yet (MIT proposed). Add a LICENSE file before making the repo public. -->
+Not decided yet.

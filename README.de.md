@@ -4,6 +4,8 @@ Falling-Sand-Sandbox im Browser mit kleinem Ökosystem: Pflanzen trinken Wasser,
 
 Mit dem sanften Regen (startet automatisch) hält sich das Ökosystem meist über lange Zeit; ohne Regen trocknet es aus und die Käfer sterben. Gemessen über 20.000 Ticks: mit Regen überleben die Käfer in den meisten Startszenen, und das Gen-Mittel wandert deutlich (z. B. 128 → 78 oder → 171).
 
+![Sandkasten mit der Ökosystem-Szene: Hügel aus Sand und Stein, Pflanzen, Käfer, Regen und Verlaufskurve](docs/screenshot.png)
+
 15 Materialien: Sand, Wasser, Stein, Holz, Feuer, Öl, Samen, Käfer, Lava, Säure, Eis, Pflanze, Dampf, Rauch, Radierer.
 
 ## Starten
@@ -35,3 +37,7 @@ Prüft die Physik (Sand, Wasser, Öl auf Wasser, Feuer inkl. Einzelfunke, Lava, 
 
 - `sim.mjs` – Simulation ohne DOM (Typ-, Lebens-, Farb- und Gen-Array, Update von unten nach oben mit wechselnder Richtung)
 - `main.mjs` – Rendering über `ImageData`, Eingabe, Speichern, Statistik
+
+## Lizenz
+
+[MIT](LICENSE)

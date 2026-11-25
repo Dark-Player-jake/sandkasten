@@ -13,7 +13,9 @@ most starting scenes and the average gene value drifts noticeably (e.g. 128 → 
 
 No build step, no dependencies.
 
-<!-- TODO before going public: add docs/screenshot.png and a live demo link (e.g. GitHub Pages). -->
+![Sandkasten with the ecosystem scene: hills of sand and stone, plants, beetles, rain and the population chart](docs/screenshot.png)
+
+<!-- TODO before going public: add a live demo link (e.g. GitHub Pages). -->
 
 > [!NOTE]
 > The user interface is in German for now. Contributions for an English UI are welcome.
@@ -67,5 +69,4 @@ keep the project free of dependencies and external resources.
 
 ## License
 
-<!-- TODO: license not chosen yet (MIT proposed). Add a LICENSE file before making the repo public. -->
-Not decided yet.
+[MIT](LICENSE)

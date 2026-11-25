@@ -15,7 +15,7 @@ No build step, no dependencies.
 
 ![Sandkasten with the ecosystem scene: hills of sand and stone, plants, beetles, rain and the population chart](docs/screenshot.png)
 
-<!-- TODO before going public: add a live demo link (e.g. GitHub Pages). -->
+**Live demo:** <https://dark-player-jake.github.io/sandkasten/>
 
 > [!NOTE]
 > The user interface is in German for now. Contributions for an English UI are welcome.

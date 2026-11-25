@@ -6,6 +6,8 @@ Mit dem sanften Regen (startet automatisch) hält sich das Ökosystem meist übe
 
 ![Sandkasten mit der Ökosystem-Szene: Hügel aus Sand und Stein, Pflanzen, Käfer, Regen und Verlaufskurve](docs/screenshot.png)
 
+**Live-Demo:** <https://dark-player-jake.github.io/sandkasten/>
+
 15 Materialien: Sand, Wasser, Stein, Holz, Feuer, Öl, Samen, Käfer, Lava, Säure, Eis, Pflanze, Dampf, Rauch, Radierer.
 
 ## Starten

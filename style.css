@@ -39,7 +39,9 @@ kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-
 @media (max-width: 860px) {
   .stage { grid-template-columns: 1fr; }
   .palette { grid-template-columns: repeat(5, 1fr); }
-  .palette button span { display: none; }
-  .palette button { justify-content: center; padding: 10px 0; }
+  .palette button { flex-direction: column; justify-content: center; gap: 3px; padding: 7px 0 5px; font-size: 11px; text-align: center; }
   .palette i { width: 18px; height: 18px; }
 }
+
+/* Touch ohne Maus: keine Tastaturhinweise (#3) */
+@media (hover: none) { .hint { display: none; } }
